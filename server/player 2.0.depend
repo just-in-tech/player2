@@ -1,0 +1,16 @@
+# depslib dependency file v1.0
+1661637688 source:/home/pi/Desktop/code/player 2.0/main.c
+	<stdio.h>
+	<stdlib.h>
+	<ulfius.h>
+	<string.h>
+	<stdbool.h>
+	<pthread.h>
+	<sys/types.h>
+	<ctype.h>
+	<unistd.h>
+	<stdlib.h>
+	<glib-2.0/gio/gio.h>
+	<glib-2.0/glib.h>
+	<math.h>
+

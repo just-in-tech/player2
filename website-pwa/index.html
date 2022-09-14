@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>pi controls</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- import the webpage's stylesheet -->
+    <link rel="stylesheet" href="/style.css">
+    
+    <!-- import the webpage's javascript file -->
+    <script src="xhr.js" defer></script>
+    <script src="/common.js" defer></script>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ce2208">
+  </head>  
+  <body>
+    <p id="requireHTTPS" class="hidden">
+      <b>STOP!</b> This page <b>must</b> be served over HTTPS.
+      Please <a>reload this page via HTTPS</a>.
+    </p>
+    <p id="notSupported">
+      <b>Sorry!</b> This browser doesn't support the Web Share API,
+      which required for this demo.
+    </p>
+<div class = "mainbar">
+
+                        <div class = "videotitle">
+                                <h2 id=title style = "color:white;font-size:200%">
+                                        title
+                                </h2>
+                        </div>
+                        <div class= powerbutton>
+                        <img class = power id=shutdown src="resources/power.png"></img>
+
+                        </div>
+
+
+
+
+                </div>
+                <div class = secondheaderline>
+                        <div class = "ccbutton">
+                                <img id=subtitle src="resources/cc.png"><img>
+
+                        </div>
+                        <div id=position-text class=position style=color:white>00:00:00 </div>
+                        <div id=total-time-text class=total-time style=color:white>00:00:00</div>
+                </div>
+                <div class="slidecontainer">
+                        <input type="range" min="1" max="1080" value="0" class="slider" id="myRange">
+                </div>
+
+                </div>
+
+                <!-- Content section of website layout -->
+                <div class = "row">
+
+                        <div class = "columnA">
+
+
+
+                        </div>
+
+                        <div class = "columnB">
+                        <div class="img-div">
+
+                        <button id="fullscreen" class="button fullscreen">fullscreen</button>
+                        <button id="play-pause" class="button playpause">play pause</button>
+                        <button id="stop" class="button stop">stop</button>
+
+                        </div>
+                        </div>
+
+                        <div class = "columnC">
+                                <button id="skip-ad" class="button skipad">Skip AD</button>
+
+
+                        </div>
+                </div>
+    
+    <div id="divResult">
+      
+    </div>
+  </body>
+</html>
