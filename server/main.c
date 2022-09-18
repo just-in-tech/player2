@@ -12,12 +12,17 @@
 #include <glib-2.0/glib.h>
 #include <math.h>
 
-
-
 #define PORT 8181
 #define PREFIX_WEBSOCKET "/websocket"
-GDBusConnection *conn;
 
+//gio dbus connection
+GDBusConnection *conn;
+GMainLoop *loop;
+GDBusError dbus_error;
+
+void print_dbus_error (char *str);
+
+//define threads
 pthread_t thread;
 pthread_t thread1;
 pthread_t player_status;
@@ -26,11 +31,6 @@ pthread_t ch4;
 pthread_t ch6;
 pthread_t ch9;
 pthread_t ch10;
-
-GMainLoop *loop;
-
-GDBusError dbus_error;
-void print_dbus_error (char *str);
 
 int callback_websocket_echo (const struct _u_request * request, struct _u_response * response, void * user_data);
 
@@ -65,6 +65,22 @@ long hour;
 long minute;
 long second;
 int sliderpos;
+/*
+for furture restructure
+struct time{
+    long second;
+    long minute;
+    long hour;
+};
+
+struct video_info{
+    int title;
+    int position;
+    int length
+    int url;
+    char art_url;
+};
+*/
 
 static char * read_file(const char * filename) {
   char * buffer = NULL;
@@ -105,7 +121,7 @@ static int set_dbus_property(const char *prop, GVariant *value){
 
 
 
-static void dbus_property_values(const gchar *key, GVariant *value){
+static struct video_info dbus_property_values(const gchar *key, GVariant *value){
 	const gchar *type = g_variant_get_type_string(value);
     int len;
     int loopwrite=0;
@@ -246,8 +262,9 @@ int action_fullscreen (void) {
     //int err = NULL;
     system("xdotool key f");
     //err=set_dbus_property("Fullscreen",g_variant_new("b",TRUE));
-    //if(err != NULL)
+    //if(err != NULL){
       //  printf("error");
+      //}
 
   return 0;
 }
@@ -351,7 +368,6 @@ void* thread_ch9(void* d){
 void* thread_ch10(void* d){
     if(strcmp("fullscreen",ch9_action)==0){
         action_fullscreen();
-
             }
     return 0;
 }
@@ -431,7 +447,7 @@ static void mpris_getall_property(GDBusConnection *con,GAsyncResult *res, gpoint
 
 	result = g_dbus_connection_call_finish(con, res, NULL);
 	if(result == NULL)
-		g_print("Unable to get result for GetManagedObjects\n");
+		g_print("Unable to get video info if a video is play make sure plasma intergration addon is installed\n");
 
 	if(result) {
 		result = g_variant_get_child_value(result, 0);
@@ -444,23 +460,6 @@ static void mpris_getall_property(GDBusConnection *con,GAsyncResult *res, gpoint
         }
 		g_variant_unref(prop_val);
 	}
-}
-
-int callback_info(void){
-        g_dbus_connection_call(conn,
-				"org.mpris.MediaPlayer2.plasma-browser-integration",
-				"/org/mpris/MediaPlayer2",
-				"org.freedesktop.DBus.Properties",
-				"GetAll",
-				g_variant_new("(s)", "org.mpris.MediaPlayer2.Player"),
-				G_VARIANT_TYPE("(a{sv})"),
-				G_DBUS_CALL_FLAGS_NONE,
-				-1,
-				NULL,
-				(GAsyncReadyCallback)mpris_getall_property,
-				NULL);
-  return 0;
-
 }
 
 void websocket_onclose_callback (const struct _u_request * request,
@@ -532,7 +531,7 @@ char sliderPosition_json[22];
     printf("Error ulfius_websocket_send_message\n");
   }
  }
-end: return 0;
+end: return U_CALLBACK_CONTINUE;
 }
 
 void websocket_echo_message_callback (const struct _u_request * request,
@@ -544,8 +543,8 @@ void websocket_echo_message_callback (const struct _u_request * request,
   char first_ch[2];
   int maxlen;
   int num=last_message->data_len;
-  char postion[6];
-  char postiontext[5];
+  char sliderpostion[6];
+  char sliderpostionParsed[5];
 
   pthread_t c4;
   pthread_t c6;
@@ -564,9 +563,9 @@ void websocket_echo_message_callback (const struct _u_request * request,
   }else{
     if(strcmp("P",first_ch)==0){
 
-        strcpy(postion,last_message->data);
-        strcpy(postiontext,&postion[1]);
-        sliderpos=atoi(postiontext);
+        strcpy(sliderpostion,last_message->data);
+        strcpy(sliderpostionParsed,&sliderpostion[1]);
+        sliderpos=atoi(sliderpostionParsed);
         printf("%d",sliderpos);
         pthread_create( &pos_thread, NULL, thread_position, NULL);
         goto end;
@@ -608,7 +607,6 @@ void websocket_echo_message_callback (const struct _u_request * request,
         if(ch10_run==0){
             maxlen=11;
             snprintf(ch9_action,maxlen,"%s",last_message->data);
-            callback_info();
             printf("no thread active starting\n");
             pthread_create( &c10, NULL, thread_ch10, NULL);
         }
@@ -621,7 +619,7 @@ void websocket_echo_message_callback (const struct _u_request * request,
   }
   printf("%d\n", num);
 
-  //printf("%s\n",message);
+  //hh
   end:return U_CALLBACK_CONTINUE;
 }
 
@@ -636,14 +634,11 @@ int callback_websocket_echo (const struct _u_request * request, struct _u_respon
   }
 }
 
-void* thread_player(void* d){
+//gets video infomation to display on web app/site
+void* thread_info(void* d){
 int counter=0;
 while(1){
   usleep(200000);
-
-  if(ulfius_websocket_status(conn)==U_WEBSOCKET_STATUS_CLOSE){
-  goto end_thread;
-  }
 
   new_info=0;
 g_dbus_connection_call(conn,
@@ -660,8 +655,7 @@ g_dbus_connection_call(conn,
 				loop);
 
 }
-end_thread:
-  return 0;
+  return U_CALLBACK_CONTINUE;
 }
 
 int main(int argc, char *argv[]) {
@@ -700,8 +694,7 @@ if (argc > 3 && 0 == o_strcmp(argv[2], "-https")) {
     printf("Start framework on port %d\n", instance.port);
     sleep(3);
     system("xdotool windowminimize $\(xdotool getactivewindow\)");
-  pthread_create( &player, NULL, thread_player, NULL);
-    // Wait for the user to press <enter> on the console to quit the application
+  pthread_create( &player, NULL, thread_info, NULL);
 
     printf("sarted\n");
 
