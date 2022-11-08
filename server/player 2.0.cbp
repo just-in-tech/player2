@@ -20,12 +20,25 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="actions.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="actions.h" />
+		<Unit filename="assets.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="assets.h" />
+		<Unit filename="dbus.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="dbus.h" />
+		<Unit filename="json-gen.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="json-gen.h" />
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Extensions>
-			<code_completion />
-			<debugger />
-		</Extensions>
+		<Extensions />
 	</Project>
 </CodeBlocks_project_file>

@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ulfius.h>
+#include <ulfius.h>
+#include <ulfius.h>
 #include <string.h>
 #include <stdbool.h>
 #include <pthread.h>
@@ -8,23 +10,20 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <glib-2.0/gio/gio.h>
-#include <glib-2.0/glib.h>
 #include <math.h>
+#include <systemd/sd-bus.h>
+#include "actions.h"
+#include "assets.h"
+#include "dbus.h"
+#include "json-gen.h"
 
 #define PORT 8181
 #define PREFIX_WEBSOCKET "/websocket"
 
-//gio dbus connection
-GDBusConnection *conn;
-GMainLoop *loop;
-GDBusError dbus_error;
-
-void print_dbus_error (char *str);
+typedef struct video_info curent_info_video_pointer;
 
 //define threads
 pthread_t thread;
-pthread_t thread1;
 pthread_t player_status;
 pthread_t position_thread;
 pthread_t ch4;
@@ -32,12 +31,14 @@ pthread_t ch6;
 pthread_t ch9;
 pthread_t ch10;
 
+//define fuctions
 int callback_websocket_echo (const struct _u_request * request, struct _u_response * response, void * user_data);
 
-const char *const INTERFACE_NAME = "org.mpris.MediaPlayer2.Player";
-const char *const CLIENT_BUS_NAME = "player2.video-control";
-const char *const SERVER_OBJECT_PATH_NAME = "/org/mpris/MediaPlayer2";
-const char *const CLIENT_OBJECT_PATH_NAME = "/in/crago/playrer2.0";
+
+//define thread fuctions
+
+
+//define variables
 char ch4_action[4][6];
 char ch6_action[6];
 char ch9_action[9];
@@ -49,236 +50,8 @@ bool ch9_run=0;
 bool ch10_run=0;
 bool quit=0;
 bool new_info=0;
-char name[15];
-char url[150];
-char title[160];
-char new_title[160];
-char art[160];
-char postion[30];
-char length[30];
-char objectpath[50];
-char temp[4][160];
-long long pos;
-long long num;
-long long timePerIncroment;
-long hour;
-long minute;
-long second;
-int sliderpos;
-/*
-for furture restructure
-struct time{
-    long second;
-    long minute;
-    long hour;
-};
-
-struct video_info{
-    int title;
-    int position;
-    int length
-    int url;
-    char art_url;
-};
-*/
-
-static char * read_file(const char * filename) {
-  char * buffer = NULL;
-  long length;
-  FILE * f;
-  if (filename != NULL) {
-    f = fopen (filename, "rb");
-    if (f) {
-      fseek (f, 0, SEEK_END);
-      length = ftell (f);
-      fseek (f, 0, SEEK_SET);
-      buffer = o_malloc (length + 1);
-      if (buffer) {
-        fread (buffer, 1, length, f);
-        buffer[length] = '\0';
-      }
-      fclose (f);
-    }
-    return buffer;
-  } else {
-    return NULL;
-  }
-}
-
-static int set_dbus_property(const char *prop, GVariant *value){
-    GVariant *result;
-    GError *error = NULL;
-
-    result = g_dbus_connection_call_sync(conn,"org.mpris.MediaPlayer2.plasma-browser-integration", "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "Set", g_variant_new("(ssv)", "org.mpris.MediaPlayer2", prop, value), NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
-
-    if(error != NULL)
-        return 1;
-
-    g_variant_unref(result);
-    return 0;
-
-}
-
-
-
-static struct video_info dbus_property_values(const gchar *key, GVariant *value){
-	const gchar *type = g_variant_get_type_string(value);
-    int len;
-    int loopwrite=0;
-    char prop8[7];
-    char prop9[8];
-    char prop11[10];
-    char prop12[11];
-
-	switch(*type) {
-		case 's':
-			sprintf(temp[loopwrite],"%s", g_variant_get_string(value, NULL));
-			//printf("%s\n", g_variant_get_string(value, NULL));
-			break;
-		case 'b':
-			sprintf(temp[loopwrite],"%d", g_variant_get_boolean(value));
-			//printf("%d\n", g_variant_get_boolean(value));
-			break;
-		case 'u':
-            sprintf(temp[loopwrite],"%d", g_variant_get_uint32(value));
-            //printf("%d\n", g_variant_get_uint32(value));
-			break;
-        case 'a':
-			printf("");
-			const gchar *uuid;
-			GVariantIter *v;
-			GVariantIter i;
-			g_variant_iter_init(&i, value);
-			while(g_variant_iter_next(&i, "{sv}", &uuid, &v)){
-				dbus_property_values(uuid, v);
-            }
-			break;
-        case 'x':
-
-            sprintf(temp[loopwrite],"%ld", g_variant_get_int64(value));
-            num=g_variant_get_int64(value);
-            break;
-        case 'o':
-            sprintf(objectpath,"%s", g_variant_get_string(value,NULL));
-
-            break;
-		default:
-			//g_print("Other %s\n",type);
-			break;
-	}
-	len=9;
-	snprintf(prop8,len,"%s", key);
-	if(strcmp("Position",prop8)==0&&loopwrite==0){
-        second=((num/(1000000)) %60);
-        minute=((num/(60000000)) %60);
-        hour=((num/(3600000000)) %24);
-        sprintf(postion,"\"position\": \"%li:%02li:%02li\"", hour, minute, second);
-        pos=num;
-	}
-	len=10;
-	snprintf(prop9,len,"%s", key);
-	if(strcmp("xesam:url",prop9)==0){
-        sprintf(url,"\"url\":\"%s\"",temp[loopwrite]);
-        loopwrite=4;
-	}
-	len=12;
-	snprintf(prop11,len,"%s", key);
-	sprintf(new_title,"\"title\":\"%s\"", temp[loopwrite]);
-	if(strcmp("xesam:title",prop11)==0){
-        if(strcmp(new_title,title)!=0){
-          new_info=1;
-          printf("new info");
-          sprintf(title,"\"title\":\"%s\"", temp[loopwrite]);
-
-        }
-
-        loopwrite=3;
-	}
-	len=13;
-    snprintf(prop12,len,"%s", key);
-	if(strcmp("mpris:artUrl",prop12)==0){
-        sprintf(art,"\"art-url\":\"%s\"", temp[loopwrite]);
-        loopwrite=1;
-	}
-	if(strcmp("mpris:length",prop12)==0){
-        second=((num/(1000000)) %60);
-        minute=((num/(60000000)) %60);
-        hour=((num/(3600000000)) %24);
-        sprintf(length,"\"length\": \"%li:%02li:%02li\"", hour, minute, second);
-        timePerIncroment=num/1080;
-        loopwrite=2;
-	}
-}
-int action_stop (void) {
-    system("pkill chromium");
-    return 0;
-}
-
-int action_shutdown (void) {
-    system("shutdown now");
-    return 0;
-}
-
-int action_subtitles (void) {
-    system("xdotool key s");
-    return 0;
-}
-
-int action_restart (void) {
-    system("reboot");
-    return 0;
-}
-
-int action_playpause (void) {
-
-
-    GVariant *result;
-    GError *error = NULL;
-
-    const char *const METHOD_NAME = "PlayPause";
-
-    result = g_dbus_connection_call_sync(conn,"org.mpris.MediaPlayer2.playerctld", "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player", METHOD_NAME, NULL, NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
-
-    if(error != NULL)
-        return 1;
-
-    g_variant_unref(result);
-    return 0;
-
-
-  return 0;
-}
-
-
-int action_skipad (void) {
-
-    system("xdotool mousemove 1870 980 click 1");
-    system("xdotool mousemove 1920 500");
-    return 0;
-}
-
-int action_fullscreen (void) {
-
-    //int err = NULL;
-    system("xdotool key f");
-    //err=set_dbus_property("Fullscreen",g_variant_new("b",TRUE));
-    //if(err != NULL){
-      //  printf("error");
-      //}
-
-  return 0;
-}
-
-int volumeplus(void){
-    system("pactl set-sink-volume @DEFAULT_SINK@ +5%");
-
-return 0;
-}
-
-int volumeminus(void){
-    system("pactl set-sink-volume @DEFAULT_SINK@ -5%");
-return 0;
-}
+bool seek=0;
+sd_bus* bus=NULL;
 
 void* thread_ch4(void* d){
 int action_counter=0;
@@ -326,7 +99,7 @@ int action_counter=0;
 
 
     }*/
-    end:ch4_run=0;
+    ch4_run=0;
     return 0;
 }
 
@@ -350,7 +123,7 @@ void* thread_ch6(void* d){
 
 void* thread_ch9(void* d){
     if(strcmp("playpause",ch9_action)==0){
-        action_playpause();
+        action_playpause(bus);
     }else{
         if(strcmp("closecapt",ch9_action)==0){
             action_subtitles();
@@ -367,28 +140,11 @@ void* thread_ch9(void* d){
 
 void* thread_ch10(void* d){
     if(strcmp("fullscreen",ch9_action)==0){
-        action_fullscreen();
-            }
+        action_fullscreen(bus);
+    }else{
+        printf("no match\n");
+    }
     return 0;
-}
-
-void*thread_position(void* d){
-  int64_t newPosition;
-  newPosition=timePerIncroment*sliderpos;
-  printf("%d\n",newPosition);
-          GVariant *result;
-    GError *error = NULL;
-
-    const char *const METHOD_NAME = "SetPosition";
-
-    result = g_dbus_connection_call_sync(conn,"org.mpris.MediaPlayer2.playerctld", "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player", METHOD_NAME, g_variant_new("(ox)", objectpath,newPosition), NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
-
-    if(error != NULL)
-        return 1;
-
-    g_variant_unref(result);
-    return 0;
-  return 0;
 }
 
 int callback_notimevideo (const struct _u_request * request, struct _u_response * response, void * user_data) {
@@ -430,7 +186,7 @@ return 0;
 int callback_hotspot (const struct _u_request * request, struct _u_response * response, void * user_data) {
   ulfius_set_string_body_response(response, 200, u_map_get(request->map_url, "offon"));
   pthread_t phone;
-  phone=thread1;
+  phone=thread;
   printf("turn hotspot off or on");
   if(strcmp(u_map_get(request->map_url, "offon"),"on")==0){
         system("sudo systemctl start hotspot.service &");
@@ -439,32 +195,10 @@ int callback_hotspot (const struct _u_request * request, struct _u_response * re
   return U_CALLBACK_CONTINUE;
 }
 
-static void mpris_getall_property(GDBusConnection *con,GAsyncResult *res, gpointer data){
-	GVariant *result = NULL;
-	GMainLoop *loop = NULL;
-
-	loop = (GMainLoop *)data;
-
-	result = g_dbus_connection_call_finish(con, res, NULL);
-	if(result == NULL)
-		g_print("Unable to get video info if a video is play make sure plasma intergration addon is installed\n");
-
-	if(result) {
-		result = g_variant_get_child_value(result, 0);
-		const gchar *property_name;
-		GVariantIter i;
-		GVariant *prop_val;
-		g_variant_iter_init(&i, result);
-		while(g_variant_iter_next(&i, "{&sv}", &property_name, &prop_val)){
-			dbus_property_values(property_name, prop_val);
-        }
-		g_variant_unref(prop_val);
-	}
-}
-
 void websocket_onclose_callback (const struct _u_request * request,
                                 struct _websocket_manager * websocket_manager,
                                 void * websocket_onclose_user_data) {
+
   if (websocket_onclose_user_data != NULL) {
     printf("websocket_onclose_user_data is %s\n", websocket_onclose_user_data);
     o_free(websocket_onclose_user_data);
@@ -475,100 +209,77 @@ void websocket_manager_callback(const struct _u_request * request,
                                struct _websocket_manager * websocket_manager,
                                void * websocket_manager_user_data) {
 
-char json[700];
-//int leng;
-//json = (char *) malloc(400);
+bool first_time=1;
+static char json[700];
+char time_string[8];
 
-int sliderPosition=0;
-char sliderPosition_json[22];
+    while(quit==0){
+        usleep(795000);
 
-  //if (websocket_manager_user_data != NULL) {
-   // printf("websocket_manager_user_data is %s", websocket_manager_user_data);
-  //}
-  sleep(1);
-  sliderPosition=pos/timePerIncroment;
-  sprintf(sliderPosition_json,"\"sliderposition\":%d",sliderPosition);
-     // leng = strlen(postion);
-      //leng = leng + strlen(length);
-      //leng = leng + strlen(url);
-      //leng = leng + strlen(art);
-      //leng = leng + strlen(title);
-      //leng = leng + 6;
-      //json = (char *) realloc(json, leng);
-      sprintf(json,"{%s,%s,%s,%s,%s}", length, postion, url, title, art);
-      int maxlen = strlen(json);
-      if (ulfius_websocket_send_message(websocket_manager, U_WEBSOCKET_OPCODE_TEXT, maxlen, json) != U_OK) {
-    printf("Error ulfius_websocket_send_message\n");
-  }
-  while(quit==0){
-  usleep(795000);
+        if(ulfius_websocket_status(websocket_manager)==U_WEBSOCKET_STATUS_CLOSE){
+            goto end;
+        }
 
-  if(ulfius_websocket_status(websocket_manager)==U_WEBSOCKET_STATUS_CLOSE){
-  goto end;
-  }
-    if(new_info==1){
-      printf("new has being sent");
-      sliderPosition=pos/timePerIncroment;
-      sprintf(sliderPosition_json,"\"sliderposition\":%d",sliderPosition);
-      //leng = strlen(postion);
-      //leng = leng + strlen(length);
-      //leng = leng + strlen(url);
-      //leng = leng + strlen(art);
-      //leng = leng + strlen(title);
-      //leng = leng + 6;
-      //json = (char *) realloc(json, leng);
-      sprintf(json,"{%s,%s,%s,%s,%s,%s}", length, postion, sliderPosition_json, url, title, art);
-    }else{
-    //leng =strlen(postion);
-    //leng=leng+2;
-    //json = (char *) realloc(json, leng);
-    sliderPosition=pos/timePerIncroment;
-    sprintf(sliderPosition_json,"\"sliderposition\":%d",sliderPosition);
-    sprintf(json,"{%s,%s}", postion,sliderPosition_json);
+        //print position to string
+        sprintf(time_string,"%d:%02d:%02d",((curent_info_video_pointer*)websocket_manager_user_data)->position.hour,((curent_info_video_pointer*)websocket_manager_user_data)->position.minute,((curent_info_video_pointer*)websocket_manager_user_data)->position.second);
+
+        //write json to be sent
+        json_start(json);
+        json_write_string(json,"position",time_string);
+        json_write_int(json,"slider-position",((curent_info_video_pointer*)websocket_manager_user_data)->slider_position);
+        if(new_info==1||first_time==1){
+            //add all info to json
+            printf("new\n");
+            sprintf(time_string,"%d:%02d:%02d",((curent_info_video_pointer*)websocket_manager_user_data)->length.hour,((curent_info_video_pointer*)websocket_manager_user_data)->length.minute,((curent_info_video_pointer*)websocket_manager_user_data)->length.second);
+            json_write_string(json,"length",time_string);
+            json_write_string(json,"url",((curent_info_video_pointer*)websocket_manager_user_data)->url);
+            json_write_string(json,"title",((curent_info_video_pointer*)websocket_manager_user_data)->title);
+            json_write_string(json,"art-url",((curent_info_video_pointer*)websocket_manager_user_data)->art_url);
+            first_time=0;
+
+        }
+        json_finish(json);
+        int maxlen = strlen(json);
+        if (ulfius_websocket_send_message(websocket_manager, U_WEBSOCKET_OPCODE_TEXT, maxlen, json) != U_OK) {
+            printf("Error ulfius_websocket_send_message\n");
+        }
     }
-    maxlen = strlen(json);
-    if (ulfius_websocket_send_message(websocket_manager, U_WEBSOCKET_OPCODE_TEXT, maxlen, json) != U_OK) {
-    printf("Error ulfius_websocket_send_message\n");
-  }
- }
-end: return U_CALLBACK_CONTINUE;
+end: return ;
 }
 
-void websocket_echo_message_callback (const struct _u_request * request,
+void websocket_message_callback (const struct _u_request * request,
                                          struct _websocket_manager * websocket_manager,
                                          const struct _websocket_message * last_message,
                                          void * websocket_incoming_message_user_data) {
-  printf("Incoming message, rsv: 0x%02x, opcode: 0x%02x, mask: %d, len: %zu, text payload '%.*s'\n", last_message->rsv, last_message->opcode, last_message->has_mask, last_message->data_len, last_message->data_len, last_message->data);
+  //printf("Incoming message, rsv: 0x%02x, opcode: 0x%02x, mask: %d, len: %zu, text payload '%.*s'\n", last_message->rsv, last_message->opcode, last_message->has_mask, last_message->data_len, last_message->data_len, last_message->data);
   //char message[6];
   char first_ch[2];
   int maxlen;
   int num=last_message->data_len;
-  char sliderpostion[6];
-  char sliderpostionParsed[5];
 
   pthread_t c4;
   pthread_t c6;
   pthread_t c9;
   pthread_t c10;
-  pthread_t pos_thread;
-  pos_thread=position_thread;
   c4=ch4;
   c6=ch6;
   c9=ch9;
   c10=ch10;
-
+  printf("%s\n",((curent_info_video_pointer*)websocket_incoming_message_user_data)->trackid);
   snprintf(first_ch,2,"%s",last_message->data);
   if(strcmp("V",first_ch)==0){
 
-  }else{
-    if(strcmp("P",first_ch)==0){
+    }else if(strcmp("P",first_ch)==0){
+        char slider_position_array[6];
+        char slider_position_parsed[5];
+        int slider_position;
 
-        strcpy(sliderpostion,last_message->data);
-        strcpy(sliderpostionParsed,&sliderpostion[1]);
-        sliderpos=atoi(sliderpostionParsed);
-        printf("%d",sliderpos);
-        pthread_create( &pos_thread, NULL, thread_position, NULL);
-        goto end;
+        strcpy(slider_position_array,last_message->data);
+        strcpy(slider_position_parsed,&slider_position_array[1]);
+        // convert text to number
+        slider_position=atoi(slider_position_parsed);
+        set_video_position(websocket_incoming_message_user_data,slider_position, bus);
+        return;
     }else{
         switch(num){
     case 4:
@@ -616,17 +327,17 @@ void websocket_echo_message_callback (const struct _u_request * request,
         break;
   }
     }
-  }
   printf("%d\n", num);
 
-  //hh
-  end:return U_CALLBACK_CONTINUE;
+  return ;
 }
 
-int callback_websocket_echo (const struct _u_request * request, struct _u_response * response, void * user_data) {
+int callback_websocket_open (const struct _u_request * request, struct _u_response * response, void * user_data) {
   char * websocket_user_data = o_strdup("my_user_data");
   int ret;
-  if ((ret = ulfius_set_websocket_response(response, NULL, NULL, &websocket_manager_callback, websocket_user_data, &websocket_echo_message_callback, websocket_user_data, &websocket_onclose_callback, websocket_user_data)) == U_OK) {
+
+  //open websocket connection
+  if ((ret = ulfius_set_websocket_response(response, NULL, NULL, &websocket_manager_callback, user_data, &websocket_message_callback, user_data, &websocket_onclose_callback, websocket_user_data)) == U_OK) {
     ulfius_add_websocket_deflate_extension(response);
     return U_CALLBACK_CONTINUE;
   } else {
@@ -634,77 +345,274 @@ int callback_websocket_echo (const struct _u_request * request, struct _u_respon
   }
 }
 
-//gets video infomation to display on web app/site
-void* thread_info(void* d){
-int counter=0;
-while(1){
-  usleep(200000);
+//gets new video infomation
+void* get_new_video_info_thread(void * d){
 
-  new_info=0;
-g_dbus_connection_call(conn,
-				"org.mpris.MediaPlayer2.plasma-browser-integration",
-				"/org/mpris/MediaPlayer2",
-				"org.freedesktop.DBus.Properties",
-				"GetAll",
-				g_variant_new("(s)", "org.mpris.MediaPlayer2.Player"),
-				G_VARIANT_TYPE("(a{sv})"),
-				G_DBUS_CALL_FLAGS_NONE,
-				-1,
-				NULL,
-				(GAsyncReadyCallback)mpris_getall_property,
-				loop);
+int loop=0;
+sd_bus_error err=SD_BUS_ERROR_NULL;
+sd_bus_message *msg = NULL;
+int error=0;
+int long prev_len=0;
+bool check_title=0;
 
-}
+printf("start looking for new info\n");
+for(loop=0;loop<30&&new_info==0;loop++){
+sd_bus_get_property(bus,
+"org.mpris.MediaPlayer2.plasma-browser-integration",
+"/org/mpris/MediaPlayer2",
+"org.mpris.MediaPlayer2.Player",
+"Metadata",
+&err,&msg,"a{sv}");
+error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_ARRAY, "{sv}");
+        if (error < 0)
+                return error;
+
+        while ((error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_DICT_ENTRY, "sv")) > 0) {
+                const char *name;
+                const char *contents;
+                const char *ch;
+                long int temp;
+
+
+                error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_STRING, &name);
+                if (error < 0){
+                    printf("error\n");
+                    return error;
+                }
+
+                error = sd_bus_message_peek_type(msg, NULL, &contents);
+                if (error < 0){
+                    printf("error\n");
+                    return error;
+                }
+
+                error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_VARIANT, contents);
+                if (error < 0){
+                    printf("error\n");
+                    return error;
+                }
+
+                    if(strcmp("mpris:artUrl",name)==0){
+                        error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_STRING, &ch);
+                        if (error < 0){
+                            printf("unable to get art url\n");
+                            error = sd_bus_message_skip(msg, contents);
+                            if (error < 0)
+                                printf("unable to skip\n");
+                        }else{
+                            snprintf(((curent_info_video_pointer*)d)->art_url,160,"%s",ch);
+                        }
+
+                        goto next;
+                    }else if(strcmp("mpris:length",name)==0){
+                        error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_INT64, &temp);
+                        if (error < 0){
+                            printf("unable to get length\n");
+                            error = sd_bus_message_skip(msg, contents);
+                        }else{
+                            ((curent_info_video_pointer*)d)->length=decode_time(temp);
+                            ((curent_info_video_pointer*)d)->time_per_incorment=temp/1080;
+                            if(prev_len!=temp){
+                            if(loop!=0){
+                                check_title=1;
+                                printf("new length\n");
+                            }
+                            }
+                        }
+                        goto next;
+
+                    }else if(strcmp("mpris:trackid",name)==0){
+                        error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_OBJECT_PATH, &ch);
+                        if(error < 0){
+                            printf("unable to get trackid\n");
+                            error = sd_bus_message_skip(msg, contents);
+                            if (error < 0)
+                                printf("unable to skip\n");
+                        }else{
+                            snprintf(((curent_info_video_pointer*)d)->trackid,100,"%s",ch);
+                            printf("%s\n",((curent_info_video_pointer*)d)->trackid);
+                        }
+                        //current_video_info->=value;
+                        goto next;
+                    }else if(strcmp("xesam:title",name)==0){
+                        error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_STRING, &ch);
+                        if(error < 0){
+                            printf("unable to get title\n");
+                            error = sd_bus_message_skip(msg, contents);
+                            if (error < 0)
+                                printf("unable to skip\n");
+                        }else{
+                            if(check_title==1||loop>28){
+                                if(strcmp(ch,((curent_info_video_pointer*)d)->title)==0){
+                                    new_info=1;
+                                }
+                            }
+                            snprintf(((curent_info_video_pointer*)d)->title,160,"%s",ch);
+                        }
+                        goto next;
+                    }else if(strcmp("xesam:url",name)==0){
+                        error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_STRING, &ch);
+                        if(error < 0){
+                            printf("unable to get url\n");
+                            error = sd_bus_message_skip(msg, contents);
+                            if (error < 0)
+                                printf("unable to skip\n");
+                        }else{
+                            snprintf(((curent_info_video_pointer*)d)->url,160,"%s",ch);
+                        }
+                        goto next;
+                    }else if(strcmp("mpris:Position",name)==0){
+                        error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_INT64, &temp);
+                        ((curent_info_video_pointer*)d)->position=decode_time(temp);
+                        if(error < 0){
+                            printf("unable to get position\n");
+                            error = sd_bus_message_skip(msg, contents);
+                            if (error < 0)
+                                printf("unable to skip\n");
+                        }else{
+                            ((curent_info_video_pointer*)d)->position=decode_time(temp);
+                        }
+                        goto next;
+                    }else{
+                        error = sd_bus_message_skip(msg, contents);
+                                if (error < 0){
+                                    printf("unable to skip\n");
+
+                                }
+                                 goto next;
+
+                    }
+
+                next:error = sd_bus_message_exit_container(msg);
+                if (error < 0)
+                    return NULL;
+
+                error = sd_bus_message_exit_container(msg);
+                if (error < 0)
+                        return NULL;
+        }
+        if (error < 0)
+            return NULL;
+        if(new_info==1){
+            goto new_info_timer;
+        }
+        usleep(1700000);
+    }
+    if(new_info==1){
+        printf("new video found\n");
+        new_info_timer:usleep(1000000);
+        new_info=0;
+    }
+
   return U_CALLBACK_CONTINUE;
 }
 
+int get_video_position(struct video_info *video_info_current){
+    static long long prev_pos;
+    static long long prev_video_pos;
+    static long long pos;
+    sd_bus_message *msg = NULL;
+    sd_bus_error err = SD_BUS_ERROR_NULL;
+    int error=0;
+    //get player postion
+    sd_bus_get_property(bus,
+    "org.mpris.MediaPlayer2.plasma-browser-integration",
+    "/org/mpris/MediaPlayer2",
+    "org.mpris.MediaPlayer2.Player",
+    "Position",
+    &err,&msg,"x");
+    sd_bus_message_read(msg,"x",&pos);
+    if(error<0){
+        return -1;
+    // figure out if new video is playing
+    }else if(pos<prev_pos && seek==0){
+        prev_video_pos = prev_pos;
+        prev_pos = pos;
+        video_info_current->position=decode_time(pos);
+        return 1;
+    }
+    prev_pos = pos;
+    video_info_current->slider_position=pos/video_info_current->time_per_incorment;
+    video_info_current->position=decode_time(pos);
+
+    return 0;
+}
+
+int monitor_video_playback(struct video_info *current_video_info){
+
+    pthread_t player;
+    player=player_status;
+    int error;
+    bool check_all_info=1;
+
+    while(1){
+        if(check_all_info==1){
+            //fetch all infomation
+            pthread_create( &player, NULL, get_new_video_info_thread,(void *) current_video_info);
+            check_all_info=0;
+        }
+
+        usleep(180000);
+        //returns 1 if it thinks there is a new video playing
+        error=get_video_position(current_video_info);
+        if(error < 0){
+            printf("error getting infomation\n");
+        }else {
+            if(error==1){
+                //when set to one next time it all check if there is a new video and return the info of it
+                check_all_info=1;
+
+            }else if(error==0){
+                check_all_info=0;
+            }
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
-  struct _u_instance instance;
-  pthread_t player;
-  player=player_status;
-  char * cert_file = NULL, * key_file = NULL;
+    struct _u_instance instance;
+    char * cert_file = NULL, * key_file = NULL;
+    sd_bus_error err= SD_BUS_ERROR_NULL;
+
+    struct video_info current_video_info;
+
+    //minmize terminal window
+    //sleep(5);
+    //system("xdotool mousemove 300 200 click 1");
+    //system("xdotool windowminimize $\(xdotool getactivewindow)");
+
+    //connect to user dbus
+    if(sd_bus_default_user(&bus)<=0)
+        return 1;
+
+    printf("connected to user bus\n");
+
 
   // Initialize instance with the port number
-  if (ulfius_init_instance(&instance, PORT, NULL, NULL) != U_OK) {
-    fprintf(stderr, "Error ulfius_init_instance, abort\n");
-    return(1);
-  }
+    if (ulfius_init_instance(&instance, PORT, NULL, NULL) != U_OK) {
+        fprintf(stderr, "Error ulfius_init_instance, abort\n");
+        return(1);
+    }
 
   // Endpoint list declaration
-    ulfius_add_endpoint_by_val(&instance, "GET", PREFIX_WEBSOCKET, "/echo", 0, &callback_websocket_echo, NULL);
+    ulfius_add_endpoint_by_val(&instance, "GET", PREFIX_WEBSOCKET, "/controller", 0, &callback_websocket_open, &current_video_info);
     ulfius_add_endpoint_by_val(&instance, "GET", "/hotspot", NULL, 0, &callback_hotspot, NULL);
     ulfius_add_endpoint_by_val(&instance, "GET", "/notimevideo", NULL, 0, &callback_notimevideo, NULL);
-    if(strcmp(argv[1],"start")==0){
-GMainLoop *loop;
 
-	conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	if(conn == NULL) {
-		g_print("Not able to get connection to system bus\n");
-		return 1;
-	}
-if (argc > 3 && 0 == o_strcmp(argv[2], "-https")) {
-      key_file = read_file(argv[3]);
-      cert_file = read_file(argv[4]);
-      if (key_file == NULL || cert_file == NULL) {
-        printf("Error reading https certificate files\n");
-
-      } else {
+// start with https if defined
+    if (argc > 3 && 0 == o_strcmp(argv[1], "-https")) {
+        key_file = read_file(argv[2]);
+        cert_file = read_file(argv[3]);
+        if (key_file == NULL || cert_file == NULL) {
+            printf("Error reading https certificate files\n");
+        } else {
 
          if (ulfius_start_secure_framework(&instance, key_file, cert_file) == U_OK) {
-    printf("Start framework on port %d\n", instance.port);
-    sleep(3);
-    system("xdotool windowminimize $\(xdotool getactivewindow\)");
-  pthread_create( &player, NULL, thread_info, NULL);
-
-    printf("sarted\n");
-
-
-    loop = g_main_loop_new(NULL, FALSE);
-
-	g_main_loop_run(loop);
+    printf("framework started on port %d\n", instance.port);
+    //loop to get video infomation
+    monitor_video_playback(&current_video_info);
   } else {
-    fprintf(stderr, "Error starting framework\n");
-     printf("End framework\n");
+     printf("error starting framework\n");
 
   ulfius_stop_framework(&instance);
   ulfius_clean_instance(&instance);
@@ -714,46 +622,22 @@ if (argc > 3 && 0 == o_strcmp(argv[2], "-https")) {
       }
       o_free(key_file);
       o_free(cert_file);
+    //if https not defined start in http mode
     } else {
+        printf("no certificate to start in secure mode\n");
        if (ulfius_start_framework(&instance) == U_OK) {
-    printf("Start framework on port %d\n", instance.port);
-    sleep(5);
-    system("xdotool mousemove 300 200 click 1");
-    system("xdotool windowminimize $\(xdotool getactivewindow\)");
-  pthread_create( &player, NULL, thread_player, NULL);
-    // Wait for the user to press <enter> on the console to quit the application
-
-    printf("sarted\n");
-
-
-    loop = g_main_loop_new(NULL, FALSE);
-
-	g_main_loop_run(loop);
+        printf("framework started on port %d\n", instance.port);
+        //loop to get video infomation
+        monitor_video_playback(&current_video_info);
   } else {
-    fprintf(stderr, "Error starting framework\n");
-     printf("End framework\n");
-
-  ulfius_stop_framework(&instance);
-  ulfius_clean_instance(&instance);
-
+     printf("Error starting framework\n");
+    sd_bus_error_free(&err);
+    sd_bus_unref(bus);
+    ulfius_stop_framework(&instance);
+    ulfius_clean_instance(&instance);
+}
   return 0;
   }
-    }
 
-
-  // Start the framework
-
-  }else{
-  printf("not right");
-  return 1;
-  }
-  if(strcmp(argv[1],"stop")==0){
-  printf("stop framework\n");
-
-  ulfius_stop_framework(&instance);
-  ulfius_clean_instance(&instance);
-
-  return 0;
-  }
   return 0;
 }
