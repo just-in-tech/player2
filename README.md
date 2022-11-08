@@ -11,13 +11,13 @@ remotely send and control video playback in a chromuim web browser. Player2 can 
 
 ## build instructions
   ```bash
-  sudo apt install pthreaded ulfius-2.7 
+  sudo apt install pthreaded ulfius-2.7-dev
   ```
-  note: could be inproved by using a different libary for dbus instead of gio
+  note: this rerequries the use of systemd because it uses the sd-bus library
   
 ## how to setup
   ### raspberry pi
     make user call pi
 
 ## how to use
-
+  
