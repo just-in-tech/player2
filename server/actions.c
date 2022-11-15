@@ -2,6 +2,8 @@
 #include "assets.h"
 #include <systemd/sd-bus.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <unistd.h>
 
 typedef struct video_info curent_info_video_pointer;
 
@@ -16,7 +18,7 @@ int action_shutdown (void) {
 }
 
 int action_subtitles (void) {
-    system("xdotool key s");
+    system("xdotool key c");
     return 0;
 }
 
@@ -49,14 +51,59 @@ int action_skipad (void) {
 }
 
 int action_fullscreen (sd_bus *bus) {
+    sd_bus_error err = SD_BUS_ERROR_NULL;
+    sd_bus_message *msg = NULL;
+    bool fullscreen;
+    int loop=0;
+    int error;
 
-    //int err = NULL;
+    printf("fullscreen\n");
+    while(fullscreen==0&&loop<=20){
+    loop++;
+    usleep(1000000);
     system("xdotool key f");
-    //err=set_dbus_property("Fullscreen",g_variant_new("b",TRUE));
-    //if(err != NULL){
-      //  printf("error");
-      //}
+    if(error<0)
+        printf("%s",err.name);
 
+    usleep(2500000);
+
+            error=sd_bus_get_property(bus, "org.mpris.MediaPlayer2.plasma-browser-integration", "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2", "Fullscreen", &err, &msg, "b");
+    if(error<0)
+        printf("%s\n",err.message);
+            error=sd_bus_message_read_basic(msg, 'b', &fullscreen);
+            if(error<0)
+                printf("%s\n",err.message);
+    printf("%d\n",fullscreen);
+    if(err._need_free!=0){
+        printf("returned error: %s\n",err.message);
+    }else{
+        if(fullscreen==1){
+            printf("is fullscreen\n");
+        }else if(fullscreen==0){
+            printf("not fullscreen\n");
+            printf("%d\n",fullscreen);
+            error=sd_bus_set_property(bus, "org.mpris.MediaPlayer2.plasma-browser-integration" ,"/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2","Fullscreen", &err, "b", "1");
+            usleep(2500000);
+
+            sd_bus_get_property(bus,
+"org.mpris.MediaPlayer2.plasma-browser-integration",
+"/org/mpris/MediaPlayer2",
+"org.mpris.MediaPlayer2",
+"Fullscreen",
+&err,&msg,"b");
+            sd_bus_message_read_basic(msg, SD_BUS_TYPE_BOOLEAN, &fullscreen);
+
+
+            if(fullscreen==1){
+                printf("is fullscreen\n");
+            }else if(fullscreen==0){
+                printf("not fullscreen\n");
+                printf("%d\n",fullscreen);
+            }
+        }
+    }
+    }
+    printf("exit full %d\n",fullscreen);
   return 0;
 }
 

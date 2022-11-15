@@ -1,5 +1,4 @@
 #include "assets.h"
-
 #include <math.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -52,5 +51,21 @@ struct time decode_time(long int microseconds){
 
 int Loging(char message,int return_value){
 
+    return 0;
+}
+
+int no_video_playing(struct video_info *current_video_info){
+    sprintf(current_video_info->art_url,"none");
+    sprintf(current_video_info->url,"none");
+    sprintf(current_video_info->title,"no video playing");
+    sprintf(current_video_info->trackid,"none");
+    current_video_info->slider_position=0;
+    current_video_info->time_per_incorment=0;
+    current_video_info->length.hour=0;
+    current_video_info->length.minute=0;
+    current_video_info->length.second=0;
+    current_video_info->position.hour=0;
+    current_video_info->position.minute=0;
+    current_video_info->position.second=0;
     return 0;
 }

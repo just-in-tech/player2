@@ -158,12 +158,11 @@ int callback_notimevideo (const struct _u_request * request, struct _u_response 
     system("pkill chromium");
     sleep(1);
     system(command);
-    sleep(15);
-    system("xdotool key f");
+    sleep(10);
+    action_fullscreen(bus);
 
 return U_CALLBACK_CONTINUE;
 }
-
 
 void* hotspot(void* d){
     int x=0;
@@ -229,7 +228,7 @@ char time_string[8];
         json_write_int(json,"slider-position",((curent_info_video_pointer*)websocket_manager_user_data)->slider_position);
         if(new_info==1||first_time==1){
             //add all info to json
-            printf("new\n");
+            printf("full payload being sent\n");
             sprintf(time_string,"%d:%02d:%02d",((curent_info_video_pointer*)websocket_manager_user_data)->length.hour,((curent_info_video_pointer*)websocket_manager_user_data)->length.minute,((curent_info_video_pointer*)websocket_manager_user_data)->length.second);
             json_write_string(json,"length",time_string);
             json_write_string(json,"url",((curent_info_video_pointer*)websocket_manager_user_data)->url);
@@ -238,6 +237,7 @@ char time_string[8];
             first_time=0;
 
         }
+
         json_finish(json);
         int maxlen = strlen(json);
         if (ulfius_websocket_send_message(websocket_manager, U_WEBSOCKET_OPCODE_TEXT, maxlen, json) != U_OK) {
@@ -357,12 +357,16 @@ bool check_title=0;
 
 printf("start looking for new info\n");
 for(loop=0;loop<30&&new_info==0;loop++){
-sd_bus_get_property(bus,
+error=sd_bus_get_property(bus,
 "org.mpris.MediaPlayer2.plasma-browser-integration",
 "/org/mpris/MediaPlayer2",
 "org.mpris.MediaPlayer2.Player",
 "Metadata",
 &err,&msg,"a{sv}");
+if(error<0){
+    printf("please make sure plasma boswer intergation is installed\n");
+
+}
 error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_ARRAY, "{sv}");
         if (error < 0)
                 return error;
@@ -515,12 +519,15 @@ int get_video_position(struct video_info *video_info_current){
     sd_bus_error err = SD_BUS_ERROR_NULL;
     int error=0;
     //get player postion
-    sd_bus_get_property(bus,
+    error=sd_bus_get_property(bus,
     "org.mpris.MediaPlayer2.plasma-browser-integration",
     "/org/mpris/MediaPlayer2",
     "org.mpris.MediaPlayer2.Player",
     "Position",
     &err,&msg,"x");
+    if(error<0){
+        return 2;
+    }
     sd_bus_message_read(msg,"x",&pos);
     if(error<0){
         return -1;
@@ -543,11 +550,14 @@ int monitor_video_playback(struct video_info *current_video_info){
     pthread_t player;
     player=player_status;
     int error;
-    bool check_all_info=1;
+    bool check_all_info=0;
+    bool first_time=1;
+    bool no_video=1;
 
     while(1){
         if(check_all_info==1){
             //fetch all infomation
+            pthread_join(player,NULL);
             pthread_create( &player, NULL, get_new_video_info_thread,(void *) current_video_info);
             check_all_info=0;
         }
@@ -563,7 +573,23 @@ int monitor_video_playback(struct video_info *current_video_info){
                 check_all_info=1;
 
             }else if(error==0){
+                if(no_video==1){
+                    check_all_info=1;
+                    printf("new video dected\n");
+                    no_video=0;
+                }
+            }else if(error==2){
+                no_video_playing(current_video_info);
                 check_all_info=0;
+                if(first_time==1){
+                    printf("no video playing or plasma broswer intragtion is not installed\n");
+                    no_video=1;
+                    first_time=0;
+                }else if(no_video==0){
+                    printf("please send video\n");
+                    no_video_playing(current_video_info);
+                    no_video=1;
+                }
             }
         }
     }
@@ -578,8 +604,10 @@ int main(int argc, char *argv[]) {
 
     //minmize terminal window
     //sleep(5);
-    //system("xdotool mousemove 300 200 click 1");
     //system("xdotool windowminimize $\(xdotool getactivewindow)");
+
+    printf("initialising\n");
+    no_video_playing(&current_video_info);
 
     //connect to user dbus
     if(sd_bus_default_user(&bus)<=0)

@@ -57,19 +57,21 @@
 	<systemd/sd-bus.h>
 	"assets.h"
 
-1667870458 source:/home/pi/Desktop/gits/player2/server/actions.c
+1668323009 source:/home/pi/Desktop/gits/player2/server/actions.c
 	"actions.h"
 	"assets.h"
 	<systemd/sd-bus.h>
 	<stdlib.h>
+	<stdbool.h>
+	<unistd.h>
 
 1667870418 /home/pi/Desktop/gits/player2/server/actions.h
 	<systemd/sd-bus.h>
 	"assets.h"
 
-1667698547 /home/pi/Desktop/gits/player2/server/assets.h
+1668293920 /home/pi/Desktop/gits/player2/server/assets.h
 
-1667889062 source:/home/pi/Desktop/gits/player2/server/assets.c
+1668295333 source:/home/pi/Desktop/gits/player2/server/assets.c
 	"assets.h"
 	<math.h>
 	<stdio.h>
@@ -93,7 +95,7 @@
 
 1666952527 /home/pi/Desktop/gits/player2/server/json-gen.h
 
-1667872872 source:/home/pi/Desktop/gits/player2/server/main.c
+1668299298 source:/home/pi/Desktop/gits/player2/server/main.c
 	<stdio.h>
 	<stdlib.h>
 	<ulfius.h>

@@ -18,6 +18,7 @@ struct video_info{
     char trackid[100];
 };
 
+int no_video_playing(struct video_info *current_video_info);
 char * read_file(const char * filename);
 int write_to_file(char to_write);
 struct time decode_time(long int miroseconds);
