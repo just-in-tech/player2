@@ -31,6 +31,7 @@ pthread_t ch6;
 pthread_t ch9;
 pthread_t ch10;
 
+
 //define fuctions
 int callback_websocket_echo (const struct _u_request * request, struct _u_response * response, void * user_data);
 
@@ -67,14 +68,13 @@ int action_counter=0;
             volumeminus();
         }else{
             if(strcmp("stop",ch4_action[action_counter])==0){
-                printf("stop\n");
                 action_stop();
             }else{
                 if(strcmp("mute",ch4_action[action_counter])==0){
 
                 }else{
 
-                    //printf("%d\n",action_counter);
+                    write_to_log_que("no matching actions","4 char",0);
                 }
             }
         }
@@ -113,7 +113,7 @@ void* thread_ch6(void* d){
             if(strcmp("update",ch6_action)==0){
                 printf("update\n");
             }else{
-                printf("no match\n");
+                write_to_log_que("no matching actions","6 char",0);
 
             }
         }
@@ -131,7 +131,7 @@ void* thread_ch9(void* d){
             if(strcmp("powerdown",ch9_action)==0){
                 action_shutdown();
             }else{
-                printf("no match\n");
+                write_to_log_que("no matching actions","9 char",0);
             }
         }
     }
@@ -142,7 +142,7 @@ void* thread_ch10(void* d){
     if(strcmp("fullscreen",ch9_action)==0){
         action_fullscreen(bus);
     }else{
-        printf("no match\n");
+        write_to_log_que("no matching actions","10 char",0);
     }
     return 0;
 }
@@ -154,12 +154,10 @@ int callback_notimevideo (const struct _u_request * request, struct _u_response 
     int maxlen = sizeof command;
     char play_url[70];
     strcpy(play_url, u_map_get(request->map_url, "url"));
-    snprintf(command,maxlen,"chromium-browser --kiosk --start-fullscreen --no-sandbox --disable-infobars %s &", play_url);
+    snprintf(command,maxlen,"chromium-browser --autoplay-policy=no-user-gesture-required --kiosk --start-fullscreen --no-sandbox --disable-infobars %s &", play_url);
     system("pkill chromium");
     sleep(1);
     system(command);
-    sleep(10);
-    action_fullscreen(bus);
 
 return U_CALLBACK_CONTINUE;
 }
@@ -167,17 +165,17 @@ return U_CALLBACK_CONTINUE;
 void* hotspot(void* d){
     int x=0;
     while(x==0){
+
         x=system("ping -s1 -c1 google.com > /dev/null 2>&1");
         loop:sleep(360);
-        printf("looping");
+
     }
     x=system("ping -s1 -c1 google.com > /dev/null 2>&1");
     if(x==0){
-        printf("may not");
+
         sleep(360);
         goto loop;
     }
-    printf("stop");
     system("systemctl stop hotspot.service &");
 return 0;
 }
@@ -199,10 +197,12 @@ void websocket_onclose_callback (const struct _u_request * request,
                                 void * websocket_onclose_user_data) {
 
   if (websocket_onclose_user_data != NULL) {
+    write_to_log_que("websoket closed","websoket onclose",0);
     printf("websocket_onclose_user_data is %s\n", websocket_onclose_user_data);
     o_free(websocket_onclose_user_data);
   }
 }
+
 //runs all the time the websocket is active
 void websocket_manager_callback(const struct _u_request * request,
                                struct _websocket_manager * websocket_manager,
@@ -228,7 +228,7 @@ char time_string[8];
         json_write_int(json,"slider-position",((curent_info_video_pointer*)websocket_manager_user_data)->slider_position);
         if(new_info==1||first_time==1){
             //add all info to json
-            printf("full payload being sent\n");
+            write_to_log_que("sending full json payload","websocket manager",0);
             sprintf(time_string,"%d:%02d:%02d",((curent_info_video_pointer*)websocket_manager_user_data)->length.hour,((curent_info_video_pointer*)websocket_manager_user_data)->length.minute,((curent_info_video_pointer*)websocket_manager_user_data)->length.second);
             json_write_string(json,"length",time_string);
             json_write_string(json,"url",((curent_info_video_pointer*)websocket_manager_user_data)->url);
@@ -241,7 +241,7 @@ char time_string[8];
         json_finish(json);
         int maxlen = strlen(json);
         if (ulfius_websocket_send_message(websocket_manager, U_WEBSOCKET_OPCODE_TEXT, maxlen, json) != U_OK) {
-            printf("Error ulfius_websocket_send_message\n");
+            write_to_log_que("error sending json to client","websocket manager",0);
         }
     }
 end: return ;
@@ -254,6 +254,7 @@ void websocket_message_callback (const struct _u_request * request,
   //printf("Incoming message, rsv: 0x%02x, opcode: 0x%02x, mask: %d, len: %zu, text payload '%.*s'\n", last_message->rsv, last_message->opcode, last_message->has_mask, last_message->data_len, last_message->data_len, last_message->data);
   //char message[6];
   char first_ch[2];
+  char temp_log[200];
   int maxlen;
   int num=last_message->data_len;
 
@@ -265,7 +266,7 @@ void websocket_message_callback (const struct _u_request * request,
   c6=ch6;
   c9=ch9;
   c10=ch10;
-  printf("%s\n",((curent_info_video_pointer*)websocket_incoming_message_user_data)->trackid);
+
   snprintf(first_ch,2,"%s",last_message->data);
   if(strcmp("V",first_ch)==0){
 
@@ -274,6 +275,7 @@ void websocket_message_callback (const struct _u_request * request,
         char slider_position_parsed[5];
         int slider_position;
 
+        seek=1;
         strcpy(slider_position_array,last_message->data);
         strcpy(slider_position_parsed,&slider_position_array[1]);
         // convert text to number
@@ -324,10 +326,12 @@ void websocket_message_callback (const struct _u_request * request,
         break;
     default:
         printf("not valid\n");
+        sprintf(temp_log,"unvalid websoket message %s",last_message->data);
+        write_to_log_que(temp_log,"websoket message callback",0);
         break;
   }
     }
-  printf("%d\n", num);
+
 
   return ;
 }
@@ -368,8 +372,10 @@ if(error<0){
 
 }
 error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_ARRAY, "{sv}");
-        if (error < 0)
-                return error;
+        if (error < 0){
+            write_to_log_que("error entering array to get new video info","get new video info",0);
+            return error;
+        }
 
         while ((error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_DICT_ENTRY, "sv")) > 0) {
                 const char *name;
@@ -380,29 +386,29 @@ error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_ARRAY, "{sv}");
 
                 error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_STRING, &name);
                 if (error < 0){
-                    printf("error\n");
+                    write_to_log_que("error geting name of dbus property","get new video info",0);
                     return error;
                 }
 
                 error = sd_bus_message_peek_type(msg, NULL, &contents);
                 if (error < 0){
-                    printf("error\n");
+                    write_to_log_que("error getting var of dbus proptery","get new video info",0);
                     return error;
                 }
 
                 error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_VARIANT, contents);
                 if (error < 0){
-                    printf("error\n");
+                    write_to_log_que("error enetering var container","get new video info",0);
                     return error;
                 }
 
                     if(strcmp("mpris:artUrl",name)==0){
                         error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_STRING, &ch);
                         if (error < 0){
-                            printf("unable to get art url\n");
+                            write_to_log_que("unable to get art url","get new video info",0);
                             error = sd_bus_message_skip(msg, contents);
                             if (error < 0)
-                                printf("unable to skip\n");
+                                write_to_log_que("unable to skip","get new video info",0);
                         }else{
                             snprintf(((curent_info_video_pointer*)d)->art_url,160,"%s",ch);
                         }
@@ -411,16 +417,16 @@ error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_ARRAY, "{sv}");
                     }else if(strcmp("mpris:length",name)==0){
                         error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_INT64, &temp);
                         if (error < 0){
-                            printf("unable to get length\n");
+                            write_to_log_que("unable get length","get new video info",0);
                             error = sd_bus_message_skip(msg, contents);
                         }else{
                             ((curent_info_video_pointer*)d)->length=decode_time(temp);
                             ((curent_info_video_pointer*)d)->time_per_incorment=temp/1080;
                             if(prev_len!=temp){
-                            if(loop!=0){
-                                check_title=1;
-                                printf("new length\n");
-                            }
+                                if(loop!=0){
+                                    check_title=1;
+                                    write_to_log_que("got new length","get new video info",0);
+                                }
                             }
                         }
                         goto next;
@@ -428,51 +434,52 @@ error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_ARRAY, "{sv}");
                     }else if(strcmp("mpris:trackid",name)==0){
                         error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_OBJECT_PATH, &ch);
                         if(error < 0){
-                            printf("unable to get trackid\n");
+                            write_to_log_que("unable to get trackid","get new video info",0);
                             error = sd_bus_message_skip(msg, contents);
                             if (error < 0)
-                                printf("unable to skip\n");
+                                write_to_log_que("unable to skip","get new video info",0);
                         }else{
-                            snprintf(((curent_info_video_pointer*)d)->trackid,100,"%s",ch);
-                            printf("%s\n",((curent_info_video_pointer*)d)->trackid);
+                            sprintf(((curent_info_video_pointer*)d)->trackid,"%s",ch);
                         }
                         //current_video_info->=value;
                         goto next;
                     }else if(strcmp("xesam:title",name)==0){
                         error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_STRING, &ch);
                         if(error < 0){
-                            printf("unable to get title\n");
+                            write_to_log_que("unable to get title","get new video info",0);
                             error = sd_bus_message_skip(msg, contents);
                             if (error < 0)
-                                printf("unable to skip\n");
+                                write_to_log_que("unable to skip","get new video info",0);
                         }else{
                             if(check_title==1||loop>28){
                                 if(strcmp(ch,((curent_info_video_pointer*)d)->title)==0){
                                     new_info=1;
+                                    write_to_log_que("got new info","get new video info",0);
                                 }
                             }
-                            snprintf(((curent_info_video_pointer*)d)->title,160,"%s",ch);
+                            sprintf(((curent_info_video_pointer*)d)->title,"%s",ch);
                         }
                         goto next;
                     }else if(strcmp("xesam:url",name)==0){
                         error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_STRING, &ch);
                         if(error < 0){
-                            printf("unable to get url\n");
+                            write_to_log_que("unable to get url","get new video info",0);
                             error = sd_bus_message_skip(msg, contents);
                             if (error < 0)
-                                printf("unable to skip\n");
+                                write_to_log_que("unable to skip","get new video info",0);
                         }else{
-                            snprintf(((curent_info_video_pointer*)d)->url,160,"%s",ch);
+                            sprintf(((curent_info_video_pointer*)d)->url,"%s",ch);
                         }
                         goto next;
                     }else if(strcmp("mpris:Position",name)==0){
                         error = sd_bus_message_read_basic(msg, SD_BUS_TYPE_INT64, &temp);
                         ((curent_info_video_pointer*)d)->position=decode_time(temp);
                         if(error < 0){
-                            printf("unable to get position\n");
+                            write_to_log_que("unable to get position","get new video info",0);
                             error = sd_bus_message_skip(msg, contents);
+
                             if (error < 0)
-                                printf("unable to skip\n");
+                                write_to_log_que("unable to skip","get new video info",0);
                         }else{
                             ((curent_info_video_pointer*)d)->position=decode_time(temp);
                         }
@@ -480,7 +487,7 @@ error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_ARRAY, "{sv}");
                     }else{
                         error = sd_bus_message_skip(msg, contents);
                                 if (error < 0){
-                                    printf("unable to skip\n");
+                                    write_to_log_que("unable to skip unwanted info","get new video info",0);
 
                                 }
                                  goto next;
@@ -500,12 +507,13 @@ error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_ARRAY, "{sv}");
         if(new_info==1){
             goto new_info_timer;
         }
-        usleep(1700000);
+        usleep(1600000);
     }
     if(new_info==1){
-        printf("new video found\n");
+        write_to_log_que("no matching actions","get new video info",0);
         new_info_timer:usleep(1000000);
         new_info=0;
+        action_fullscreen(bus);
     }
 
   return U_CALLBACK_CONTINUE;
@@ -530,6 +538,7 @@ int get_video_position(struct video_info *video_info_current){
     }
     sd_bus_message_read(msg,"x",&pos);
     if(error<0){
+
         return -1;
     // figure out if new video is playing
     }else if(pos<prev_pos && seek==0){
@@ -557,20 +566,23 @@ int monitor_video_playback(struct video_info *current_video_info){
     while(1){
         if(check_all_info==1){
             //fetch all infomation
-            pthread_join(player,NULL);
+
+            seek=0;
             pthread_create( &player, NULL, get_new_video_info_thread,(void *) current_video_info);
             check_all_info=0;
         }
 
         usleep(180000);
-        //returns 1 if it thinks there is a new video playing
+        //returns 1 if it thinks there is a new video playing and 2 if it hink none is playing
         error=get_video_position(current_video_info);
+
         if(error < 0){
-            printf("error getting infomation\n");
+            write_to_log_que("unable read what dbus postion","montoir info",0);
         }else {
             if(error==1){
                 //when set to one next time it all check if there is a new video and return the info of it
                 check_all_info=1;
+                no_video=1;
 
             }else if(error==0){
                 if(no_video==1){
@@ -579,16 +591,26 @@ int monitor_video_playback(struct video_info *current_video_info){
                     no_video=0;
                 }
             }else if(error==2){
+                static int loop=0;
                 no_video_playing(current_video_info);
-                check_all_info=0;
+                if(new_info==1&&loop!=5){
+                    printf("no video send\n");
+                    loop++;
+                    if(loop==5){
+                        new_info=0;
+                    }
+                }
+                seek=0;
                 if(first_time==1){
                     printf("no video playing or plasma broswer intragtion is not installed\n");
+                    write_to_log_que("waiting for first video","montoir info",0);
                     no_video=1;
                     first_time=0;
                 }else if(no_video==0){
                     printf("please send video\n");
                     no_video_playing(current_video_info);
                     no_video=1;
+                    new_info=1;
                 }
             }
         }
@@ -603,22 +625,37 @@ int main(int argc, char *argv[]) {
     struct video_info current_video_info;
 
     //minmize terminal window
-    //sleep(5);
-    //system("xdotool windowminimize $\(xdotool getactivewindow)");
+    sleep(5);
+    system("xdotool windowminimize $\(xdotool getactivewindow)");
 
     printf("initialising\n");
+
+
     no_video_playing(&current_video_info);
 
+    //initialise message que lock
+    if (pthread_mutex_init(&lock_que, NULL) != 0) {
+        printf("\n mutex init has failed\n");
+        write_to_log_que("mutex init has failed","main",0);
+        return -1;
+    }
+    start_logging();
+
     //connect to user dbus
-    if(sd_bus_default_user(&bus)<=0)
-        return 1;
+    if(sd_bus_default_user(&bus)<=0){
+        write_to_log_que("failed to connect to dbus exiting","main",1);
+        return -1;
+
+    }
 
     printf("connected to user bus\n");
+    write_to_log_que("connected to user dbus","main",0);
 
 
   // Initialize instance with the port number
     if (ulfius_init_instance(&instance, PORT, NULL, NULL) != U_OK) {
-        fprintf(stderr, "Error ulfius_init_instance, abort\n");
+        write_to_log_que("failed to initialize ulfius exiting","main",1);
+        printf("error starting network services");
         return(1);
     }
 
@@ -632,7 +669,8 @@ int main(int argc, char *argv[]) {
         key_file = read_file(argv[2]);
         cert_file = read_file(argv[3]);
         if (key_file == NULL || cert_file == NULL) {
-            printf("Error reading https certificate files\n");
+            printf("https specifited but no certificate files are spesified\n");
+            write_to_log_que("no https certificate files speseified","main",0);
         } else {
 
          if (ulfius_start_secure_framework(&instance, key_file, cert_file) == U_OK) {
@@ -640,11 +678,12 @@ int main(int argc, char *argv[]) {
     //loop to get video infomation
     monitor_video_playback(&current_video_info);
   } else {
-     printf("error starting framework\n");
+  printf("error starting network services\n");
+  write_to_log_que("error starting framework","main",1);
 
   ulfius_stop_framework(&instance);
   ulfius_clean_instance(&instance);
-
+    pthread_mutex_destroy(&lock_que);
   return 0;
   }
       }
@@ -652,18 +691,21 @@ int main(int argc, char *argv[]) {
       o_free(cert_file);
     //if https not defined start in http mode
     } else {
+        write_to_log_que("no https specseified starting in unsecure mode","main",0);
         printf("no certificate to start in secure mode\n");
        if (ulfius_start_framework(&instance) == U_OK) {
         printf("framework started on port %d\n", instance.port);
         //loop to get video infomation
         monitor_video_playback(&current_video_info);
   } else {
-     printf("Error starting framework\n");
+     printf("error starting network services");
+     write_to_log_que("error starting ulfius framework" ,"main", 1);
     sd_bus_error_free(&err);
     sd_bus_unref(bus);
     ulfius_stop_framework(&instance);
     ulfius_clean_instance(&instance);
 }
+    pthread_mutex_destroy(&lock_que);
   return 0;
   }
 

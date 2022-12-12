@@ -57,7 +57,7 @@
 	<systemd/sd-bus.h>
 	"assets.h"
 
-1668323009 source:/home/pi/Desktop/gits/player2/server/actions.c
+1670306739 source:/home/pi/Desktop/gits/player2/server/actions.c
 	"actions.h"
 	"assets.h"
 	<systemd/sd-bus.h>
@@ -69,9 +69,11 @@
 	<systemd/sd-bus.h>
 	"assets.h"
 
-1668293920 /home/pi/Desktop/gits/player2/server/assets.h
+1669531519 /home/pi/Desktop/gits/player2/server/assets.h
+	<pthread.h>
+	<stdbool.h>
 
-1668295333 source:/home/pi/Desktop/gits/player2/server/assets.c
+1670293468 source:/home/pi/Desktop/gits/player2/server/assets.c
 	"assets.h"
 	<math.h>
 	<stdio.h>
@@ -79,6 +81,9 @@
 	<ctype.h>
 	<unistd.h>
 	<stdlib.h>
+	<pthread.h>
+	<time.h>
+	<stdbool.h>
 
 1667689151 source:/home/pi/Desktop/gits/player2/server/dbus.c
 	"dbus.h"
@@ -88,14 +93,14 @@
 1667171138 /home/pi/Desktop/gits/player2/server/dbus.h
 	<systemd/sd-bus.h>
 
-1667087637 source:/home/pi/Desktop/gits/player2/server/json-gen.c
+1670307196 source:/home/pi/Desktop/gits/player2/server/json-gen.c
 	"json-gen.h"
 	<string.h>
 	<stdio.h>
 
 1666952527 /home/pi/Desktop/gits/player2/server/json-gen.h
 
-1668299298 source:/home/pi/Desktop/gits/player2/server/main.c
+1670541570 source:/home/pi/Desktop/gits/player2/server/main.c
 	<stdio.h>
 	<stdlib.h>
 	<ulfius.h>
