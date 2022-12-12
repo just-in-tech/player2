@@ -1,4 +1,4 @@
-var ws = new WebSocket("wss://192.168.0.34:8181/websocket/echo");
+var ws = new WebSocket("wss://192.168.0.34:8181/websocket/controller");
 const btnPlayPause = document.getElementById('play-pause');
 const btnFullscreen = document.getElementById('fullscreen');
 const btnSkipAd = document.getElementById('skip-ad');
@@ -85,7 +85,7 @@ document.addEventListener('visibilitychange', function (event){
     } else {
         console.log('is visible'); 
         
-        	ws=new WebSocket("wss://192.168.0.34:8181/websocket/echo");
+        	ws=new WebSocket("wss://192.168.0.34:8181/websocket/controller");
         	ws.addEventListener("message",messagereceived)
     
 }
