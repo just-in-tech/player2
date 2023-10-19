@@ -10,6 +10,7 @@ char log_temp[200];
 typedef struct video_info curent_info_video_pointer;
 
 int action_stop (void) {
+    // this dose not need to change if operating system uses different name for chromium
     system("pkill chromium");
     return 0;
 }
@@ -48,7 +49,7 @@ return 0;
 }
 
 int action_skipad (void) {
-
+    // made for 1080p screens
     system("xdotool mousemove 1870 980 click 1");
     //system("xdotool mousemove 1920 500");
     return 0;
