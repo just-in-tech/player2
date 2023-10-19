@@ -39,8 +39,8 @@ int json_write_int(char *json, char const* key, int number){
     return 0;
 }
 int json_finish(char *json){
-    char end;
-    snprintf(&end,2,"}");
-    strcat(json,&end);
+    char end[3];
+    snprintf(end,2,"}");
+    strcat(json,end);
     return 0;
 }
