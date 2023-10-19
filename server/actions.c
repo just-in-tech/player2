@@ -95,17 +95,17 @@ if(error<0){
             error=sd_bus_message_read_basic(msg, 'b', &fullscreen);
             if(error<0){
                     error=0;
-                    sprintf("",err.message);
                     write_to_log_que("fullscreen get property error\n","action fullscreen",0);
                 }else{
                     if(fullscreen==1){
-            write_to_log_que("is fullscreen with f","action fullscreen","0");
+            write_to_log_que("is fullscreen with f","action fullscreen",0);
         }else if(fullscreen==0){
-            write_to_log_que("not fullscreen with f","action fullscreen","0");
+            write_to_log_que("not fullscreen with f","action fullscreen",0);
             error=sd_bus_set_property(bus, "org.mpris.MediaPlayer2.plasma-browser-integration" ,"/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2","Fullscreen", &err, "b", "1");
             if(error<0){
                     error=0;
-                    sprintf("fullscreen set property error %s\n",err.message);
+                    //not compltete
+                    //sprintf("fullscreen set property error %s\n",err.message);
                     write_to_log_que(log_temp,"action fullscreen",0);
                     err = SD_BUS_ERROR_NULL;
                 }
@@ -147,7 +147,6 @@ if(error<0){
                 return 0;
             }else if(fullscreen==0){
                 if(loop==20){
-
                     write_to_log_que("failed to make video fullscreen check","action fullscreen",0);
                     return -1;
                 }else{
