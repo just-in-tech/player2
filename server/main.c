@@ -50,6 +50,7 @@ bool quit=0;
 bool new_info=0;
 bool seek=0;
 sd_bus* bus=NULL;
+char web_browser[30]="chromium-browser";
 
 void* thread_ch4(void* d){
 int action_counter=0;
@@ -151,8 +152,9 @@ int callback_notimevideo (const struct _u_request * request, struct _u_response 
     int maxlen = sizeof command;
     char play_url[70];
     strcpy(play_url, u_map_get(request->map_url, "url"));
-    snprintf(command,maxlen,"chromium-browser --autoplay-policy=no-user-gesture-required --kiosk --start-fullscreen --no-sandbox --disable-infobars %s &", play_url);
-    system("pkill chromium");
+    snprintf(command,maxlen,"pkill %s",web_browser);
+    system(command);
+    snprintf(command,maxlen,"%s --autoplay-policy=no-user-gesture-required --kiosk --start-fullscreen --no-sandbox --disable-infobars %s &", web_browser, play_url);
     sleep(1);
     system(command);
 
