@@ -111,6 +111,7 @@ int write_to_log_que(char *message, char *section,bool print_message){
     sprintf(log_messages[que_position],"[%d/%d/%d %d:%d:%d] section: %s message: %s", time.tm_mday,  time.tm_mon + 1, time.tm_year + 1900, time.tm_hour, time.tm_min, time.tm_sec, section, message);
     printf("%d written to que\n",que_position);
     while(1){
+        usleep(100);
         if(qued_messages+1==que_position){
             qued_messages++;
             return 0;
@@ -125,7 +126,7 @@ int write_to_log_que(char *message, char *section,bool print_message){
 void* write_log_file_thread(void* d){
     int returned_error;
     FILE *fp;
-    char file[25];
+    char file[50];
     bool error=0;
 
 
