@@ -214,7 +214,7 @@ char time_string[8];
     while(quit==0){
         usleep(795000);
 
-        if(ulfius_websocket_status(websocket_manager)==U_WEBSOCKET_STATUS_CLOSE){
+        if(ulfius_websocket_status(websocket_manager)!=U_WEBSOCKET_STATUS_OPEN){
             goto end;
         }
 
@@ -239,6 +239,10 @@ char time_string[8];
 
         json_finish(json);
         int maxlen = strlen(json);
+        if(ulfius_websocket_status(websocket_manager)!=U_WEBSOCKET_STATUS_OPEN){
+            write_to_log_que("websocket closed","websocket manager",0);
+            goto end;
+        }
         if (ulfius_websocket_send_message(websocket_manager, U_WEBSOCKET_OPCODE_TEXT, maxlen, json) != U_OK) {
             write_to_log_que("error sending json to client","websocket manager",0);
         }
@@ -274,7 +278,7 @@ void websocket_message_callback (const struct _u_request * request,
         char slider_position_parsed[5];
         int slider_position;
 
-        seek=1;
+        //seek=1;
         strcpy(slider_position_array,last_message->data);
         strcpy(slider_position_parsed,&slider_position_array[1]);
         // convert text to number
@@ -367,7 +371,7 @@ error=sd_bus_get_property(bus,
 "Metadata",
 &err,&msg,"a{sv}");
 if(error<0){
-    printf("please make sure plasma boswer intergation is installed\n");
+    printf("did not get new video info tring again\n");
 
 }
 error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_ARRAY, "{sv}");
@@ -509,7 +513,7 @@ error = sd_bus_message_enter_container(msg, SD_BUS_TYPE_ARRAY, "{sv}");
         usleep(1600000);
     }
     if(new_info==1){
-        write_to_log_que("no matching actions","get new video info",0);
+        write_to_log_que("waiting for info to go out","get new video info",0);
         new_info_timer:usleep(1000000);
         new_info=0;
         action_fullscreen(bus);
@@ -546,10 +550,13 @@ int get_video_position(struct video_info *video_info_current){
         video_info_current->position=decode_time(pos);
         return 1;
     }
-    prev_pos = pos;
-    video_info_current->slider_position=pos/video_info_current->time_per_incorment;
-    video_info_current->position=decode_time(pos);
-
+prev_pos = pos;
+    if(pos==0||video_info_current->time_per_incorment==0){
+        video_info_current->slider_position=0;
+    }else{
+        video_info_current->slider_position=pos/video_info_current->time_per_incorment;
+        video_info_current->position=decode_time(pos);
+    }
     return 0;
 }
 
