@@ -129,12 +129,13 @@ void* write_log_file_thread(void* d){
     char file[50];
     bool error=0;
 
-
+    char path[49];
+    strcpy(path,getenv("HOME"));
     time_t t = time(NULL);
     struct tm time = *localtime(&t);
-    sprintf(file,"/home/pi/logs/%d-%d_%d:%d:%d", time.tm_mday,  time.tm_mon + 1, time.tm_hour, time.tm_min, time.tm_sec);
+    sprintf(file,"%s/logs/%d-%d_%d:%d:%d", path, time.tm_mday,  time.tm_mon + 1, time.tm_hour, time.tm_min, time.tm_sec);
     while(1){
-
+        usleep(100);
         if(qued_messages<writing){
 
         }else if(qued_messages==5&&writing==0){
@@ -180,8 +181,6 @@ void* write_log_file_thread(void* d){
             restart_log_write:;
         }
     }
-
-    usleep(100);
 
     //closes the file
     returned_error=fclose(fp);
