@@ -568,6 +568,7 @@ int monitor_video_playback(struct video_info *current_video_info){
     bool check_all_info=0;
     bool first_time=1;
     bool no_video=1;
+    static int loop=0;
 
     while(1){
         if(check_all_info==1){
@@ -589,18 +590,21 @@ int monitor_video_playback(struct video_info *current_video_info){
                 //when set to one next time it all check if there is a new video and return the info of it
                 check_all_info=1;
                 no_video=1;
+                loop=0;
 
             }else if(error==0){
                 if(no_video==1){
                     check_all_info=1;
                     printf("new video dected\n");
                     no_video=0;
+                    new_info=0;
                 }
             }else if(error==2){
                 static int loop=0;
                 no_video_playing(current_video_info);
                 if(new_info==1&&loop!=5){
                     printf("no video send\n");
+                    new_info=1;
                     loop++;
                     if(loop==5){
                         new_info=0;
