@@ -18,6 +18,10 @@
 #define PREFIX_WEBSOCKET "/websocket"
 
 typedef struct video_info curent_info_video_pointer;
+struct def_video_sent{
+	char * url;
+	char * title;
+};
 
 //define threads
 pthread_t thread;
@@ -50,7 +54,7 @@ bool quit=0;
 bool new_info=0;
 bool seek=0;
 sd_bus* bus=NULL;
-char web_browser[30]="chromium-browser";
+char web_browser[30]="chromium";
 
 void* thread_ch4(void* d){
 int action_counter=0;
@@ -144,8 +148,69 @@ void* thread_ch10(void* d){
     }
     return 0;
 }
+struct def_video_sent print_map(const struct _u_map * map) {
+  struct def_video_sent new_video_sent;
+  const char **keys, * value;
+  int len, request_keys_loop, vaild_keys_loop;
+  new_video_sent.url=NULL;
 
-int callback_notimevideo (const struct _u_request * request, struct _u_response * response, void * user_data) {
+  if (map != NULL) {
+    keys = u_map_enum_keys(map);
+    char vaild_keys[2][12] = {{"video_url"},{"video_title"}};
+
+
+    for (request_keys_loop=0; keys[request_keys_loop] != NULL; request_keys_loop++) {
+      value = u_map_get(map, keys[request_keys_loop]);
+      int size = sizeof(vaild_keys) / sizeof(vaild_keys[0]);
+
+      for (vaild_keys_loop=0; vaild_keys_loop<size; vaild_keys_loop++){
+        if(strcmp(vaild_keys[vaild_keys_loop],keys[request_keys_loop])==0){
+            len = snprintf(NULL, 0, "%s", value);
+
+            if(strcmp(keys[request_keys_loop],"video_url")==0){
+                 new_video_sent.url= o_malloc((size_t)(len+1));
+                snprintf(new_video_sent.url, (size_t)(len+1), "%s", value);
+                }
+            if(strcmp(keys[request_keys_loop],"video_title")==0){
+                new_video_sent.title = o_malloc((size_t)(len+1));
+                snprintf(new_video_sent.title, (size_t)(len+1), "%s", value);
+                }
+
+
+        }
+      }
+    }
+        return new_video_sent;
+  } else {
+    return;
+  }
+}
+
+int callback_post_video (const struct _u_request * request, struct _u_response * response, void * user_data) {
+  struct def_video_sent video_sent = print_map(request->map_post_body);
+  char * response_body = "Hello World!";
+  char command[200];
+  int maxlen = sizeof command;
+
+  (void)(user_data);
+  ulfius_set_string_body_response(response, 200, response_body);
+  printf("url = %s\n",video_sent.url);
+  if(video_sent.url != NULL || strcmp("null",video_sent.url)!=0){
+  snprintf(command,maxlen,"pkill %s",web_browser);
+    printf("%s",web_browser);
+    system(command);
+    sleep(1);
+    snprintf(command,maxlen,"%s --autoplay-policy=no-user-gesture-required --kiosk --start-fullscreen --no-sandbox --disable-infobars %s &", web_browser, video_sent.url);
+    system(command);
+  //o_free(response_body);
+  //o_free(post_params);
+  }else{
+    printf("not a vaild url\n");
+  }
+  return U_CALLBACK_CONTINUE;
+}
+
+/*int callback_notimevideo (const struct _u_request * request, struct _u_response * response, void * user_data) {
     ulfius_set_string_body_response(response, 200, "playing video");
     printf("you want to: %s\n",u_map_get(request->map_url, "url"));
     char command[200];
@@ -159,7 +224,7 @@ int callback_notimevideo (const struct _u_request * request, struct _u_response 
     system(command);
 
 return U_CALLBACK_CONTINUE;
-}
+}*/
 
 void* hotspot(void* d){
     int x=0;
@@ -672,7 +737,8 @@ int main(int argc, char *argv[]) {
   // Endpoint list declaration
     ulfius_add_endpoint_by_val(&instance, "GET", PREFIX_WEBSOCKET, "/controller", 0, &callback_websocket_open, &current_video_info);
     ulfius_add_endpoint_by_val(&instance, "GET", "/hotspot", NULL, 0, &callback_hotspot, NULL);
-    ulfius_add_endpoint_by_val(&instance, "GET", "/notimevideo", NULL, 0, &callback_notimevideo, NULL);
+    //ulfius_add_endpoint_by_val(&instance, "GET", "/notimevideo", NULL, 0, &callback_notimevideo, NULL);
+    ulfius_add_endpoint_by_val(&instance, "POST", "/video", NULL, 0, &callback_post_video, NULL);
 
 // start with https if defined
     if (argc > 3 && 0 == o_strcmp(argv[1], "-https")) {
