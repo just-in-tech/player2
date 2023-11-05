@@ -12,12 +12,12 @@
   "description": "controls for raspberry pi",
   "icons": [
     {
-      "src": "https://192.168.0.34/resources/icon192.png",
+      "src": "/resources/icon192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://192.168.0.34/resources/icon512.png",
+      "src": "/resources/icon512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
