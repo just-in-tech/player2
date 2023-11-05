@@ -39,10 +39,12 @@
         document.getElementById('title').textContent = parsedUrl.searchParams.get('title');
         document.getElementById('text').textContent = parsedUrl.searchParams.get('text');
         document.getElementById('url').textContent = parsedUrl.searchParams.get('url');
-	let url = "https://raspberrypi.local:8181/notimevideo?url=" + parsedUrl.searchParams.get('text');
+	let url = "https://raspberrypi.local:8181/video";
+	let data = "video_url=" + encodeURIComponent(parsedUrl.searchParams.get('text')) + "&video_title=" + parsedUrl.searchParams.get('title');
 	const xhr = new XMLHttpRequest();
-	xhr.open('GET',url);
-	xhr.send();
+	xhr.open('POST',url);
+	xhr.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+	xhr.send(data);
       });
     </script>
   </body>
