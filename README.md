@@ -6,7 +6,7 @@ remotely send and control video playback in a chromuim web browser. Player2 can 
   automatic fullscreen using mpris\
   button to update the system\
   silder video preveiws for youtube\
-  replace mannual ad skiping on youtube with automatic skiping\
+  more reiable video info\
   
 
 ## build instructions
@@ -17,7 +17,11 @@ remotely send and control video playback in a chromuim web browser. Player2 can 
   
 ## how to setup
   ### raspberry pi
-    make user call pi
+
+  ### x86-x64
+  dependnces
+  ulfius 
+    
 
 ## how to use
   
