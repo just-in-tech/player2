@@ -7,11 +7,15 @@ remotely send and control video playback in a chromuim web browser. Player2 can 
   button to update the system\
   silder video preveiws for youtube\
   more reiable video info\
+  wayland support for the current raspberry pi os\
+  configuration file to make installing easier
+  
+  
   
 
 ## build instructions
   ```bash
-  sudo apt install pthreaded ulfius-2.7-dev
+  sudo apt install pthreaded ulfius-2.7-dev x11-utils apache2
   ```
   note: this rerequries the use of systemd because it uses the sd-bus library
   
