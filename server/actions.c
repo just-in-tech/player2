@@ -21,6 +21,8 @@ int action_shutdown (void) {
 }
 
 int action_subtitles (void) {
+    //works on x11 not wayland
+    // presses the c key to get subtitles
     system("xdotool key c");
     return 0;
 }
@@ -41,6 +43,8 @@ sd_bus_call_method(bus,
 "org.mpris.MediaPlayer2.Player",
 "PlayPause",&err,&msg,NULL);
 if(err._need_free==0){
+
+    //old error hadler
     sprintf(log_temp,"error method call %s",err.message);
     write_to_log_que(log_temp,"action play pause",0);
     return 1;
@@ -49,13 +53,14 @@ return 0;
 }
 
 int action_skipad (void) {
-    // made for 1080p screens
+    // made for 1080p screens needs to be dynamic
+    // only works on x11
     system("xdotool mousemove 1870 980 click 1");
     //system("xdotool mousemove 1920 500");
     return 0;
 }
 
-int action_fullscreen (sd_bus *bus) {
+int action_automatic_fullscreen (sd_bus *bus) {
     sd_bus_error err = SD_BUS_ERROR_NULL;
     sd_bus_message *msg = NULL;
     bool fullscreen;
